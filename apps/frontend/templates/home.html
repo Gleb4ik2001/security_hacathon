@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Главная страница</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        html {
+            scroll-behavior: smooth; /* Плавная прокрутка */
+        }
+        .section {
+            padding: 100px 0; /* Отступы для секций */
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигационная панель -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Exploit Checker</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#home-section">Главная</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#exploits-section">Последние эксплойты</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#ip-section">Пробив IP</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#history-section">История поиска</a>
+                    </li>
+                </ul>
+                <span class="navbar-text text-light me-3" id="user-email">Загрузка...</span>
+                <button id="logout" class="btn btn-outline-danger">Выйти</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Главный контент -->
+    <div class="container mt-5 pt-5">
+        <!-- Главная секция -->
+        <section id="home-section" class="section">
+            <h2>Добро пожаловать!</h2>
+            <p id="welcome-message">Загрузка...</p>
+        </section>
+
+        <!-- Последние эксплойты -->
+        <section id="exploits-section" class="section bg-light">
+            <h2>Последние эксплойты</h2>
+            <p>Загрузка данных...</p>
+        </section>
+
+        <!-- Пробив IP -->
+        <section id="ip-section" class="section">
+            <h2>Пробив IP</h2>
+            <p>Введите IP-адрес для сканирования:</p>
+            <form id="ip-form" class="mb-3">
+                <div class="input-group mb-3">
+                    <input type="text" id="ip-input" class="form-control" placeholder="Введите IP-адрес" required>
+                    <button type="submit" class="btn btn-primary">Сканировать</button>
+                </div>
+            </form>
+            <div id="ip-results" class="mt-4"></div>
+        </section>
+
+        <!-- История поиска -->
+        <section id="history-section" class="section bg-light">
+            <h2>История поиска</h2>
+            <p>История ваших запросов будет отображаться здесь.</p>
+        </section>
+    </div>
+
+    <!-- Скрипты -->
+    <script>
+        // Получаем токен из localStorage
+        const accessToken = localStorage.getItem('access_token');
+
+        if (!accessToken) {
+            window.location.href = '/login/';
+        } else {
+            // Получаем данные пользователя
+            fetch('http://127.0.0.1:8000/api/v1/auth/user/', {
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + accessToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('user-email').innerText = data.email;
+                document.getElementById('welcome-message').innerText = `Добро пожаловать, ${data.email}!`;
+            })
+            .catch(() => {
+                localStorage.removeItem('access_token');
+                window.location.href = '/login/';
+            });
+
+            // Получаем последние эксплойты
+            fetch('http://127.0.0.1:8000/api/v1/parsers/latest-exploits/', {
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + accessToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const exploitsSection = document.getElementById('exploits-section');
+                const list = document.createElement('ul');
+                list.className = 'list-group';
+
+                if (data.length > 0) {
+                    data.forEach(item => {
+                        const listItem = document.createElement('li');
+                        listItem.className = 'list-group-item';
+                        listItem.innerHTML = `
+                            <h5>${item.title}</h5>
+                            <p><strong>Дата:</strong> ${item.date}</p>
+                            <p><strong>Источник:</strong> <a href="${item.source_url}" target="_blank">${item.source_url}</a></p>
+                        `;
+                        list.appendChild(listItem);
+                    });
+                } else {
+                    list.innerHTML = '<li class="list-group-item">Нет данных для отображения.</li>';
+                }
+
+                exploitsSection.appendChild(list);
+            });
+
+            // Получаем CSRF-токен из куки
+            function getCSRFToken() {
+                let cookieValue = null;
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.startsWith('csrftoken=')) {
+                        cookieValue = cookie.substring('csrftoken='.length, cookie.length);
+                        break;
+                    }
+                }
+                return cookieValue;
+            }
+
+            // Обработка формы пробива IP
+            document.getElementById('ip-form').addEventListener('submit', function (event) {
+                event.preventDefault();
+
+                const ipInput = document.getElementById('ip-input').value;
+                const resultsDiv = document.getElementById('ip-results');
+                resultsDiv.innerHTML = "Сканирование...";
+
+                const csrfToken = getCSRFToken();
+
+                fetch('http://127.0.0.1:8000/api/v1/scan-ip/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ ip: ipInput })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        resultsDiv.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                    } else {
+                        let html = '<h5>Результаты сканирования:</h5><ul class="list-group">';
+                        data.results.forEach(host => {
+                            html += `<li class="list-group-item">
+                                <strong>Хост:</strong> ${host.host} (${host.status})<br>
+                                <strong>Открытые порты:</strong>
+                                <ul>`;
+                            host.ports.forEach(port => {
+                                html += `<li>Порт ${port.port}: ${port.state}</li>`;
+                            });
+                            html += '</ul></li>';
+                        });
+                        html += '</ul>';
+                        resultsDiv.innerHTML = html;
+                    }
+                })
+                .catch(() => {
+                    resultsDiv.innerHTML = `<div class="alert alert-danger">Ошибка при сканировании.</div>`;
+                });
+            });
+        }
+
+        // Логика выхода
+        document.getElementById('logout').addEventListener('click', function () {
+            localStorage.removeItem('access_token');
+            window.location.href = '/login/';
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
