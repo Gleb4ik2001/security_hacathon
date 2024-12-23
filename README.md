@@ -31,26 +31,30 @@
 
 1. Клонируйте репозиторий:
    ```bash
-   git clone https://github.com/yourusername/django-vuln-scanner.git
-   cd django-vuln-scanner
+   git clone https://github.com/Gleb4ik2001/security_hacathon.git
+   cd security_hacathon
    ```
 
 2. Установите зависимости:
    ```bash
    pip install -r requirements.txt
    ```
+3. Создайте миграции:
+   ```bash
+   python manage.py makemigrations
+   ```
 
-3. Примените миграции:
+4. Примените миграции:
    ```bash
    python manage.py migrate
    ```
 
-4. Запустите сервер разработки:
+5. Запустите сервер разработки:
    ```bash
    python manage.py runserver
    ```
 
-5. Откройте приложение по адресу `http://127.0.0.1:8000`.
+6. Откройте приложение по адресу `http://127.0.0.1:8000`.
 
 ## Использование
 
@@ -84,10 +88,5 @@
 
 Приветствуются любые предложения и улучшения! Открывайте issue или создавайте pull request, чтобы сообщить об ошибках или предложить новые функции.
 
-## Лицензия
-
-Проект лицензирован на условиях MIT License. Подробнее в файле `LICENSE`.
-
----
 
 Удачного сканирования и будьте в безопасности!
